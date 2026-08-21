@@ -1,0 +1,70 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String    @id @default(uuid())
+  username  String    @unique
+  password  String
+  avatarUrl String?
+  createdAt DateTime  @default(now())
+  rooms     Room[]
+  messages  Message[]
+  sessions  Session[]
+}
+
+model Session {
+  id           String   @id @default(uuid())
+  refreshToken String   @unique
+  userAgent    String?
+  ipAddress    String?
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Room {
+  id        String   @id @default(uuid())
+  name      String?
+  createdAt DateTime @default(now())
+  hostId    String
+  host      User     @relation(fields: [hostId], references: [id])
+  messages  Message[]
+}
+
+model Message {
+  id        String   @id @default(uuid())
+  text      String
+  createdAt DateTime @default(now())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  roomId    String
+  room      Room     @relation(fields: [roomId], references: [id])
+}
+
+model RoomHistory {
+  id               String           @id @default(uuid())
+  roomId           String
+  roomName         String?
+  startedAt        DateTime
+  endedAt          DateTime         @default(now())
+  totalUniqueUsers Int              @default(0)
+  participants     ParticipantLog[]
+}
+
+model ParticipantLog {
+  id            String      @id @default(uuid())
+  roomHistoryId String
+  roomHistory   RoomHistory @relation(fields: [roomHistoryId], references: [id], onDelete: Cascade)
+  userId        String?
+  username      String
+  joinTime      DateTime
+  leaveTime     DateTime?
+  totalDuration Int         @default(0) // in seconds
+}
