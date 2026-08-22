@@ -9,9 +9,14 @@ class Room {
     participants;
     videoState;
     chatHistory;
+    isWaitingRoomEnabled;
+    waitingParticipants;
+    sessionLogs;
     constructor(id, password) {
         this.id = id;
-        this.password = password;
+        if (password) {
+            this.password = password;
+        }
         this.participants = new Map();
         this.videoState = {
             videoId: '', // default empty or a specific video
@@ -20,23 +25,54 @@ class Room {
             lastSyncTime: Date.now(),
         };
         this.chatHistory = [];
+        this.isWaitingRoomEnabled = false;
+        this.waitingParticipants = new Map();
+        this.sessionLogs = new Map();
     }
     addParticipant(userId, username) {
+        if (this.participants.has(userId)) {
+            const participant = this.participants.get(userId);
+            participant.socketCount += 1;
+            return participant;
+        }
         // If first participant, make them host
         const isFirst = this.participants.size === 0;
         const role = isFirst ? types_1.Role.Host : types_1.Role.Participant;
         const participant = new Participant_1.Participant(userId, username, role);
         this.participants.set(userId, participant);
+        // Add to session log
+        if (!this.sessionLogs.has(userId)) {
+            this.sessionLogs.set(userId, { userId, username, joinTime: participant.joinTime, totalDuration: 0 });
+        }
+        else {
+            // If rejoining, update join time
+            const log = this.sessionLogs.get(userId);
+            log.joinTime = participant.joinTime;
+            log.leaveTime = undefined;
+        }
         return participant;
     }
     removeParticipant(userId) {
         const participant = this.participants.get(userId);
-        this.participants.delete(userId);
-        // If host leaves, reassign host (optional feature, but good to have)
-        if (participant?.role === types_1.Role.Host && this.participants.size > 0) {
-            const nextParticipant = this.participants.values().next().value;
-            if (nextParticipant) {
-                nextParticipant.setRole(types_1.Role.Host);
+        if (participant) {
+            participant.socketCount -= 1;
+            if (participant.socketCount > 0) {
+                // They still have other active sockets, don't remove them yet
+                return participant;
+            }
+            // Zero sockets left, actually remove them
+            this.participants.delete(userId);
+            // If host leaves, reassign host
+            if (participant.role === types_1.Role.Host && this.participants.size > 0) {
+                const nextParticipant = this.participants.values().next().value;
+                if (nextParticipant) {
+                    nextParticipant.setRole(types_1.Role.Host);
+                }
+            }
+            const log = this.sessionLogs.get(userId);
+            if (log && !log.leaveTime) {
+                log.leaveTime = Date.now();
+                log.totalDuration += Math.floor((log.leaveTime - log.joinTime) / 1000);
             }
         }
         return participant;
@@ -47,8 +83,20 @@ class Room {
     getAllParticipants() {
         return Array.from(this.participants.values()).map(p => p.toJSON());
     }
+    getAllSessionLogs() {
+        return Array.from(this.sessionLogs.values());
+    }
     updateVideoState(state) {
         this.videoState = { ...this.videoState, ...state, lastSyncTime: Date.now() };
+    }
+    getTrueVideoState() {
+        const state = { ...this.videoState };
+        if (state.isPlaying) {
+            const elapsed = (Date.now() - state.lastSyncTime) / 1000;
+            state.currentTime += elapsed;
+            state.lastSyncTime = Date.now();
+        }
+        return state;
     }
     addChatMessage(message) {
         this.chatHistory.push(message);

@@ -13,7 +13,20 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 const app = express();
-app.use(cors({ origin: 'http://localhost:5173', credentials: true })); // Needs explicit origin for credentials
+
+const allowedOrigins = ['http://localhost:5173', 'http://127.0.0.1:5173'];
+if (process.env.FRONTEND_URL) {
+  // Allow multiple URLs if separated by commas
+  const urls = process.env.FRONTEND_URL.split(',').map(u => u.trim());
+  allowedOrigins.push(...urls);
+}
+
+const corsOptions = {
+  origin: allowedOrigins,
+  credentials: true,
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(cookieParser());
 
@@ -21,11 +34,7 @@ app.use('/api/auth', authRoutes);
 
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
-  cors: {
-    origin: 'http://localhost:5173',
-    methods: ['GET', 'POST'],
-    credentials: true,
-  },
+  cors: corsOptions,
   connectionStateRecovery: {
     maxDisconnectionDuration: 2 * 60 * 1000,
     skipMiddlewares: false,

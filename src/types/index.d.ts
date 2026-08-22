@@ -1,12 +1,15 @@
 export declare enum Role {
     Host = "Host",
     Moderator = "Moderator",
-    Participant = "Participant"
+    Participant = "Participant",
+    Viewer = "Viewer"
 }
 export interface UserData {
     userId: string;
     username: string;
     role: Role;
+    isAFK?: boolean;
+    joinTime?: number;
 }
 export interface VideoState {
     videoId: string;
