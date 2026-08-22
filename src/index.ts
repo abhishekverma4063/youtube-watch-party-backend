@@ -22,7 +22,7 @@ if (process.env.FRONTEND_URL) {
 }
 
 const corsOptions = {
-  origin: allowedOrigins,
+  origin: true,
   credentials: true,
 };
 
