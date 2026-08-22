@@ -4,8 +4,10 @@
   "main": "index.js",
   "scripts": {
     "start": "tsx src/index.ts",
+    "start:prod": "node dist/index.js",
     "dev": "tsx watch src/index.ts",
-    "build": "tsc"
+    "build": "prisma generate && tsc",
+    "db:migrate": "prisma migrate deploy"
   },
   "keywords": [],
   "author": "",

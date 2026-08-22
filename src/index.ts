@@ -426,6 +426,25 @@ io.on('connection', (socket: Socket) => {
 });
 
 const PORT = process.env.PORT || 3001;
-httpServer.listen(PORT, () => {
-  console.log(`Server listening on port ${PORT}`);
-});
+
+// Initialize Prisma and start server safely
+async function startServer() {
+  try {
+    // Attempt to connect to the database first
+    await prisma.$connect();
+    console.log('Successfully connected to the database.');
+    
+    httpServer.listen(PORT, () => {
+      console.log(`Server listening on port ${PORT}`);
+    });
+  } catch (error) {
+    console.error('Failed to initialize database connection.');
+    console.error('Check if DATABASE_URL is set correctly and the database is accessible.');
+    if (error instanceof Error) {
+      console.error('Error Details:', error.message);
+    }
+    process.exit(1);
+  }
+}
+
+startServer();
