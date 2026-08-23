@@ -14,15 +14,18 @@ const prisma = new PrismaClient();
 
 const app = express();
 
-const allowedOrigins = ['http://localhost:5173', 'http://127.0.0.1:5173'];
+const allowedOrigins = [
+  'http://localhost:5173', 
+  'http://127.0.0.1:5173',
+  'https://youtube-watch-party-frontend-4utc.vercel.app'
+];
 if (process.env.FRONTEND_URL) {
-  // Allow multiple URLs if separated by commas
   const urls = process.env.FRONTEND_URL.split(',').map(u => u.trim());
   allowedOrigins.push(...urls);
 }
 
 const corsOptions = {
-  origin: true,
+  origin: allowedOrigins,
   credentials: true,
 };
 
