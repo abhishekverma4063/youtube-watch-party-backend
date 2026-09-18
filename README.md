@@ -4,6 +4,9 @@
   <p align="center">
     <strong>The real-time WebSocket and API server powering the Watch Party experience.</strong>
   </p>
+  <p align="center">
+    <a href="https://youtube-watch-party-frontend-4utc.vercel.app/signup"><strong>🔗 View Live Application</strong></a>
+  </p>
 </div>
 
 ---
