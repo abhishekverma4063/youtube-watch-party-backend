@@ -8,8 +8,30 @@
 
 ---
 
-## 🚀 Overview
-A robust Node.js backend utilizing Express and Socket.io to manage real-time video synchronization, chat rooms, and user authentication. It uses Prisma ORM connected to a PostgreSQL database to securely store user data and session logs.
+## 🚀 Project Overview
+This is the backend server that drives the **YouTube Watch Party** ecosystem. It acts as the central hub for all users, built with **Node.js, Express, and Socket.io**. 
+
+The server handles two major responsibilities:
+1. **Authentication:** Uses secure HTTP-only cookies and JSON Web Tokens (JWT) to authenticate users during login/signup via REST APIs, storing data securely in a **PostgreSQL** database via **Prisma ORM**.
+2. **Real-time Engine:** Manages a highly optimized WebSocket connection pool. When a host updates the video (plays, pauses, or seeks), the backend broadcasts that exact state to all other participants in the same room with millisecond latency. It also tracks analytics, such as when users join and leave, logging the entire session history to the database once a room closes.
+
+## 📂 Project Structure
+```text
+backend/
+├── prisma/
+│   └── schema.prisma          # Database schema and models (User, RoomHistory, SessionLog)
+├── src/
+│   ├── models/                # Core business logic classes
+│   │   ├── Participant.ts     # Represents a user inside a room (Role, AFK status)
+│   │   └── Room.ts            # Manages video state, chat, and participants for a single room
+│   ├── routes/                # Express REST API endpoints
+│   │   └── auth.routes.ts     # Signup, Login, Refresh, and Logout routes
+│   ├── services/
+│   │   └── RoomManager.ts     # In-memory service managing active rooms globally
+│   ├── types/                 # TypeScript interfaces and enums
+│   │   └── index.ts           
+│   └── index.ts               # Main server entry point (Express setup & Socket.io events)
+```
 
 ## 💻 Tech Stack
 - **Runtime:** Node.js + TypeScript
@@ -21,10 +43,10 @@ A robust Node.js backend utilizing Express and Socket.io to manage real-time vid
 - **Deployment:** Railway
 
 ## 🏗️ Architecture
-- **REST API:** Handles secure user authentication (`/api/auth/signup`, `/api/auth/login`, `/api/auth/refresh`, `/api/auth/logout`) utilizing HTTP-only cookies.
+- **REST API:** Handles secure user authentication utilizing HTTP-only cookies to prevent XSS attacks.
 - **WebSocket Server:** The core engine that manages rooms, participant roles (Host vs Participant), video state syncing (Play, Pause, Seek), and live chat messages. 
-- **Room Manager Service:** An in-memory class (`RoomManager`) that efficiently handles current active rooms, keeping track of participant counts, waiting lists, and active video timestamps.
-- **Security:** Cross-Origin Resource Sharing (CORS) is strictly configured to only allow connections from the verified Vercel frontend, while gracefully handling cookie transmissions.
+- **In-Memory Management:** Instead of writing every live video timestamp to a database (which is slow and expensive), room data is held in-memory via `RoomManager` and only written to the database when the room closes (Session Logging).
+- **Security:** Cross-Origin Resource Sharing (CORS) is strictly configured to only allow connections from the verified Vercel frontend, while gracefully handling cookie transmissions across domains.
 
 ## 🔌 Running Locally
 
@@ -51,9 +73,3 @@ npm run dev
 ```
 
 > **Note:** The backend API and WebSocket server runs on **Port 3001** by default (`http://localhost:3001`).
-
-## 🌟 Key Features
-- **Stateless Authentication:** JWT validation seamlessly integrated into the Socket.io handshake middleware.
-- **Auto-Cleanup:** Rooms automatically clean themselves up and purge from memory when the last participant leaves, saving bandwidth and memory.
-- **Session Logging:** When a room closes, the entire session history (who joined, how long they stayed) is saved to the PostgreSQL database for analytics.
-- **WebRTC Ready:** Pre-built signaling events to support future peer-to-peer audio/video chat integrations.
