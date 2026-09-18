@@ -148,20 +148,29 @@ io.on('connection', (socket: Socket) => {
     if (roomId && userId) {
       const room = roomManager.getRoom(roomId);
       if (room) {
-        const participant = room.removeParticipant(userId);
-        if (participant) {
-          // Only emit user_left if they were actually removed (socketCount reached 0)
+        const participant = room.getParticipant(userId);
+        const wasHost = participant?.role === Role.Host;
+        
+        const removedParticipant = room.removeParticipant(userId);
+        if (removedParticipant) {
           if (!room.participants.has(userId)) {
-            io.to(roomId).emit('user_left', {
-              userId: userId,
-              username: participant.username,
-              participants: room.getAllParticipants(),
-              sessionLogs: room.getAllSessionLogs(),
-            });
+            if (wasHost) {
+              io.to(roomId).emit('room_closed', { message: 'The host has ended the meeting.' });
+              saveSessionLog(room);
+              roomManager.deleteRoom(roomId);
+              io.sockets.in(roomId).socketsLeave(roomId);
+              return;
+            } else {
+              io.to(roomId).emit('user_left', {
+                userId: userId,
+                username: removedParticipant.username,
+                participants: room.getAllParticipants(),
+                sessionLogs: room.getAllSessionLogs(),
+              });
+            }
           }
         }
         
-        // Clean up empty rooms
         if (room.participants.size === 0) {
           saveSessionLog(room);
           roomManager.deleteRoom(roomId);
@@ -174,18 +183,29 @@ io.on('connection', (socket: Socket) => {
     const userId = socket.data.userId;
     const room = roomManager.getRoom(roomId);
     if (room && userId) {
-      const participant = room.removeParticipant(userId);
-      if (participant) {
+      const participant = room.getParticipant(userId);
+      const wasHost = participant?.role === Role.Host;
+      
+      const removedParticipant = room.removeParticipant(userId);
+      if (removedParticipant) {
         socket.leave(roomId);
         delete socket.data.roomId;
         
         if (!room.participants.has(userId)) {
-          io.to(roomId).emit('user_left', {
-            userId: userId,
-            username: participant.username,
-            participants: room.getAllParticipants(),
-            sessionLogs: room.getAllSessionLogs(),
-          });
+          if (wasHost) {
+            io.to(roomId).emit('room_closed', { message: 'The host has ended the meeting.' });
+            saveSessionLog(room);
+            roomManager.deleteRoom(roomId);
+            io.sockets.in(roomId).socketsLeave(roomId);
+            return;
+          } else {
+            io.to(roomId).emit('user_left', {
+              userId: userId,
+              username: removedParticipant.username,
+              participants: room.getAllParticipants(),
+              sessionLogs: room.getAllSessionLogs(),
+            });
+          }
         }
       }
       

@@ -69,14 +69,6 @@ export class Room {
       // Zero sockets left, actually remove them
       this.participants.delete(userId);
       
-      // If host leaves, reassign host
-      if (participant.role === Role.Host && this.participants.size > 0) {
-        const nextParticipant = this.participants.values().next().value;
-        if (nextParticipant) {
-          nextParticipant.setRole(Role.Host);
-        }
-      }
-      
       const log = this.sessionLogs.get(userId);
       if (log && !log.leaveTime) {
         log.leaveTime = Date.now();
