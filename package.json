@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "start": "npm run db:migrate && tsx src/index.ts",
-    "start:prod": "node dist/index.js",
+    "start": "npm run db:migrate && node dist/index.js",
+    "start:dev": "npm run db:migrate && tsx src/index.ts",
     "dev": "tsx watch src/index.ts",
     "build": "prisma generate && tsc",
     "db:migrate": "prisma db push"

@@ -16,9 +16,12 @@ const auth_routes_1 = __importDefault(require("./routes/auth.routes"));
 const client_1 = require("@prisma/client");
 const prisma = new client_1.PrismaClient();
 const app = (0, express_1.default)();
-const allowedOrigins = ['http://localhost:5173', 'http://127.0.0.1:5173'];
+const allowedOrigins = [
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
+    'https://youtube-watch-party-frontend-4utc.vercel.app'
+];
 if (process.env.FRONTEND_URL) {
-    // Allow multiple URLs if separated by commas
     const urls = process.env.FRONTEND_URL.split(',').map(u => u.trim());
     allowedOrigins.push(...urls);
 }
@@ -130,19 +133,28 @@ io.on('connection', (socket) => {
         if (roomId && userId) {
             const room = roomManager.getRoom(roomId);
             if (room) {
-                const participant = room.removeParticipant(userId);
-                if (participant) {
-                    // Only emit user_left if they were actually removed (socketCount reached 0)
+                const participant = room.getParticipant(userId);
+                const wasHost = participant?.role === types_1.Role.Host;
+                const removedParticipant = room.removeParticipant(userId);
+                if (removedParticipant) {
                     if (!room.participants.has(userId)) {
-                        io.to(roomId).emit('user_left', {
-                            userId: userId,
-                            username: participant.username,
-                            participants: room.getAllParticipants(),
-                            sessionLogs: room.getAllSessionLogs(),
-                        });
+                        if (wasHost) {
+                            io.to(roomId).emit('room_closed', { message: 'The host has ended the meeting.' });
+                            saveSessionLog(room);
+                            roomManager.deleteRoom(roomId);
+                            io.sockets.in(roomId).socketsLeave(roomId);
+                            return;
+                        }
+                        else {
+                            io.to(roomId).emit('user_left', {
+                                userId: userId,
+                                username: removedParticipant.username,
+                                participants: room.getAllParticipants(),
+                                sessionLogs: room.getAllSessionLogs(),
+                            });
+                        }
                     }
                 }
-                // Clean up empty rooms
                 if (room.participants.size === 0) {
                     saveSessionLog(room);
                     roomManager.deleteRoom(roomId);
@@ -154,17 +166,28 @@ io.on('connection', (socket) => {
         const userId = socket.data.userId;
         const room = roomManager.getRoom(roomId);
         if (room && userId) {
-            const participant = room.removeParticipant(userId);
-            if (participant) {
+            const participant = room.getParticipant(userId);
+            const wasHost = participant?.role === types_1.Role.Host;
+            const removedParticipant = room.removeParticipant(userId);
+            if (removedParticipant) {
                 socket.leave(roomId);
                 delete socket.data.roomId;
                 if (!room.participants.has(userId)) {
-                    io.to(roomId).emit('user_left', {
-                        userId: userId,
-                        username: participant.username,
-                        participants: room.getAllParticipants(),
-                        sessionLogs: room.getAllSessionLogs(),
-                    });
+                    if (wasHost) {
+                        io.to(roomId).emit('room_closed', { message: 'The host has ended the meeting.' });
+                        saveSessionLog(room);
+                        roomManager.deleteRoom(roomId);
+                        io.sockets.in(roomId).socketsLeave(roomId);
+                        return;
+                    }
+                    else {
+                        io.to(roomId).emit('user_left', {
+                            userId: userId,
+                            username: removedParticipant.username,
+                            participants: room.getAllParticipants(),
+                            sessionLogs: room.getAllSessionLogs(),
+                        });
+                    }
                 }
             }
             if (room.participants.size === 0) {
@@ -398,7 +421,24 @@ io.on('connection', (socket) => {
     });
 });
 const PORT = process.env.PORT || 3001;
-httpServer.listen(PORT, () => {
-    console.log(`Server listening on port ${PORT}`);
-});
+// Initialize Prisma and start server safely
+async function startServer() {
+    try {
+        // Attempt to connect to the database first
+        await prisma.$connect();
+        console.log('Successfully connected to the database.');
+        httpServer.listen(PORT, () => {
+            console.log(`Server listening on port ${PORT}`);
+        });
+    }
+    catch (error) {
+        console.error('Failed to initialize database connection.');
+        console.error('Check if DATABASE_URL is set correctly and the database is accessible.');
+        if (error instanceof Error) {
+            console.error('Error Details:', error.message);
+        }
+        process.exit(1);
+    }
+}
+startServer();
 //# sourceMappingURL=index.js.map

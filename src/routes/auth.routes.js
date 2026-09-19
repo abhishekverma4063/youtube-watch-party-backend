@@ -26,8 +26,8 @@ const createSessionAndTokens = async (userId, req, res) => {
     await prisma.session.create({ data: { userId, refreshToken, userAgent, ipAddress, expiresAt } });
     res.cookie('refresh_token', refreshToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
+        secure: true,
+        sameSite: 'none',
         maxAge: 7 * 24 * 60 * 60 * 1000
     });
     return { accessToken, user: { id: user.id, username: user.username, avatarUrl: user.avatarUrl } };
