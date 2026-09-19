@@ -41,9 +41,9 @@ backend/
 - **Framework:** Express
 - **Real-time Communication:** Socket.io
 - **Database ORM:** Prisma
-- **Database:** PostgreSQL
+- **Database:** PostgreSQL (Neon Serverless)
 - **Authentication:** JWT (JSON Web Tokens) & bcrypt
-- **Deployment:** Railway
+- **Deployment:** Render
 
 ## 🏗️ Architecture
 - **REST API:** Handles secure user authentication utilizing HTTP-only cookies to prevent XSS attacks.
