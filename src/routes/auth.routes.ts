@@ -36,8 +36,9 @@ const createSessionAndTokens = async (userId: string, req: any, res: any) => {
 
 router.post('/signup', async (req, res) => {
   try {
-    const { username, password } = req.body;
+    let { username, password } = req.body;
     if (!username || !password) return res.status(400).json({ error: 'Username and password are required' });
+    username = username.trim().toLowerCase();
     const existingUser = await prisma.user.findUnique({ where: { username } });
     if (existingUser) return res.status(400).json({ error: 'Username is already taken' });
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -52,8 +53,9 @@ router.post('/signup', async (req, res) => {
 
 router.post('/login', async (req, res) => {
   try {
-    const { username, password } = req.body;
+    let { username, password } = req.body;
     if (!username || !password) return res.status(400).json({ error: 'Username and password are required' });
+    username = username.trim().toLowerCase();
     const user = await prisma.user.findUnique({ where: { username } });
     if (!user) return res.status(401).json({ error: 'Invalid credentials' });
     const validPassword = await bcrypt.compare(password, user.password);
